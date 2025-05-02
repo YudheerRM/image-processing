@@ -1,5 +1,6 @@
 import io
 from PIL import Image, ImageDraw, ImageFont
+import json
 
 def main(context):
     """
@@ -10,19 +11,22 @@ def main(context):
     res = context.res
     
     try:
-        # Get form data
-        form_data = req.formData
+        # Debug the request
+        context.log(f"Request method: {req.method}")
+        context.log(f"Request headers: {req.headers}")
         
-        # Check if we have form data with the image
-        if 'image' not in form_data:
-            return res.json({
-                'success': False, 
-                'message': 'No image file provided'
-            }, 400)
+        # Try to access the uploaded file from request body
+        if req.method == "POST":
+            # Get the uploaded image from body
+            if not req.body:
+                return res.json({
+                    'success': False, 
+                    'message': 'No request body found'
+                }, 400)
             
-        # Get the uploaded image
-        image_data = form_data['image']
-        image = Image.open(io.BytesIO(image_data))
+            # Get binary data directly from body    
+            image_data = req.body
+            image = Image.open(io.BytesIO(image_data))            
         
         # Upscale the image by 2x
         width, height = image.size
