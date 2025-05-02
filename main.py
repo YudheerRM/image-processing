@@ -10,15 +10,18 @@ def main(context):
     res = context.res
     
     try:
+        # Get form data
+        form_data = req.formData
+        
         # Check if we have form data with the image
-        if not req.files.get('image'):
+        if 'image' not in form_data:
             return res.json({
                 'success': False, 
                 'message': 'No image file provided'
             }, 400)
             
         # Get the uploaded image
-        image_data = req.files.get('image')['data']
+        image_data = form_data['image']
         image = Image.open(io.BytesIO(image_data))
         
         # Upscale the image by 2x
@@ -69,7 +72,7 @@ def main(context):
         )
         
     except Exception as e:
-        print(f"Error processing image: {str(e)}")
+        context.error(f"Error processing image: {str(e)}")
         return res.json({
             'success': False,
             'message': f'Error processing image: {str(e)}'
