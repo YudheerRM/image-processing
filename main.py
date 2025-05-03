@@ -1,5 +1,4 @@
 import io
-import os # Import os module
 from PIL import Image, ImageDraw, ImageFont
 
 def main(context):
@@ -21,25 +20,13 @@ def main(context):
         img_upscaled = img.resize((new_width, new_height), Image.LANCZOS)
         context.log(f"Image upscaled to {new_width}x{new_height}")
 
-        # Log current directory contents for debugging path issues
-        try:
-            cwd = os.getcwd()
-            context.log(f"Current Working Directory: {cwd}")
-            context.log(f"Files in CWD: {os.listdir('.')}")
-            # Optionally check parent directory if needed
-            # context.log(f"Files in Parent Dir: {os.listdir('..')}") 
-        except Exception as list_e:
-            context.log(f"Error listing directories: {list_e}")
-
         # 3. Add watermark
         draw = ImageDraw.Draw(img_upscaled)
         
         # Try to load a font, or use default if not available
         try:
-            # Increase font size significantly
-            # IMPORTANT: Ensure 'arial.ttf' is included in a 'fonts' directory 
-            # within your serverless function's deployment package.
-            font_path = "./fonts/arial.ttf" 
+            # Adjust path based on Appwrite structure revealed by logs
+            font_path = "function/fonts/arial.ttf" 
             font_size = 200
             font = ImageFont.truetype(font_path, font_size) 
             context.log(f"Successfully loaded font: {font_path} with size {font_size}")
