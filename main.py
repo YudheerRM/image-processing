@@ -26,10 +26,17 @@ def main(context):
         # Try to load a font, or use default if not available
         try:
             # Increase font size significantly
-            font = ImageFont.truetype("arial.ttf", 200) 
+            font_path = "arial.ttf" # Or specify a full path if needed
+            font_size = 200
+            font = ImageFont.truetype(font_path, font_size) 
+            context.log(f"Successfully loaded font: {font_path} with size {font_size}")
         except IOError:
+            context.log(f"Warning: Could not load font {font_path}. Falling back to default font.")
             font = ImageFont.load_default()
         
+        # Log the actual font object being used
+        context.log(f"Using font: {font}")
+
         watermark_text = "YRM LABS ©"
         
         # Calculate position for watermark (bottom right)
