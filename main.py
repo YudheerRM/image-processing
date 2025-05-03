@@ -1,4 +1,5 @@
 import io
+import os # Import os module
 from PIL import Image, ImageDraw, ImageFont
 
 def main(context):
@@ -19,6 +20,16 @@ def main(context):
         # Using LANCZOS for high-quality resizing
         img_upscaled = img.resize((new_width, new_height), Image.LANCZOS)
         context.log(f"Image upscaled to {new_width}x{new_height}")
+
+        # Log current directory contents for debugging path issues
+        try:
+            cwd = os.getcwd()
+            context.log(f"Current Working Directory: {cwd}")
+            context.log(f"Files in CWD: {os.listdir('.')}")
+            # Optionally check parent directory if needed
+            # context.log(f"Files in Parent Dir: {os.listdir('..')}") 
+        except Exception as list_e:
+            context.log(f"Error listing directories: {list_e}")
 
         # 3. Add watermark
         draw = ImageDraw.Draw(img_upscaled)
