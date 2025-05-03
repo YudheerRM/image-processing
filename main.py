@@ -30,13 +30,13 @@ def main(context):
         img_upscaled = img.resize((new_width, new_height), Image.LANCZOS)
         context.log(f"Image upscaled to {new_width}x{new_height}")
 
-        # 3. Add watermark with gradient
+        # 3. Add watermark with gradient and background tint
         
         # Try to load the Tangerine font
         try:
             # IMPORTANT: Ensure 'Tangerine-Regular.ttf' (or correct filename) 
             # is included in 'function/fonts/' directory.
-            font_path = "function/fonts/Tangerine-Regular.ttf" 
+            font_path = "function/fonts/Tangerine-Bold.ttf" 
             font_size = 200 # Keep or adjust size as needed
             font = ImageFont.truetype(font_path, font_size) 
             context.log(f"Successfully loaded font: {font_path} with size {font_size}")
@@ -66,10 +66,10 @@ def main(context):
         if text_width <= 0 or text_height <= 0:
              context.log("Warning: Text size is zero or negative. Skipping watermark.")
         else:
+            # --- Create Text Mask and Gradient ---
             # Create mask image for text
             mask = Image.new('L', (text_width, text_height), 0)
             mask_draw = ImageDraw.Draw(mask)
-            # Draw text onto mask (adjust position for bbox offset)
             mask_draw.text((-offset_x, -offset_y), watermark_text, font=font, fill=255)
 
             # Create gradient image
@@ -94,14 +94,39 @@ def main(context):
                 # Draw a vertical line with the calculated color
                 gradient_draw.line([(x, 0), (x, text_height)], fill=color, width=1)
 
-            # Calculate paste position (bottom right)
+            # --- Calculate Positions ---
             margin = 20
             paste_x = img_upscaled.width - text_width - margin
             paste_y = img_upscaled.height - text_height - margin
-            position = (paste_x, paste_y)
+            position = (paste_x, paste_y) # Position for the text itself
 
-            # Paste the gradient onto the upscaled image using the mask
+            # --- Create Background Tint ---
+            padding = 15 # Padding around the text for the background
+            bg_color = (0, 0, 0, 128) # Black with ~50% alpha (0-255)
+
+            # Calculate background rectangle coordinates
+            bg_x0 = paste_x - padding + offset_x # Adjust for text bbox offset
+            bg_y0 = paste_y - padding + offset_y # Adjust for text bbox offset
+            bg_x1 = paste_x + text_width + padding + offset_x
+            bg_y1 = paste_y + text_height + padding + offset_y
+            bg_rect_coords = [(bg_x0, bg_y0), (bg_x1, bg_y1)]
+
+            # Create a transparent overlay layer
+            overlay = Image.new('RGBA', img_upscaled.size, (255, 255, 255, 0))
+            draw_overlay = ImageDraw.Draw(overlay)
+
+            # Draw the semi-transparent rectangle onto the overlay
+            draw_overlay.rectangle(bg_rect_coords, fill=bg_color)
+
+            # Alpha composite the overlay onto the main image
+            img_upscaled = Image.alpha_composite(img_upscaled, overlay)
+            # --- End Background Tint ---
+
+
+            # Paste the gradient text onto the image (which now has the tint) using the mask
+            # Note: The paste position remains the same as calculated for the text
             img_upscaled.paste(gradient, position, mask)
+
 
         # 4. Convert to WebP format
         output = io.BytesIO()
