@@ -1,32 +1,35 @@
 import io
+import base64
 from PIL import Image, ImageDraw, ImageFont
 import json
 
 def main(context):
-    """
-    Process an image by upscaling it, adding a watermark, and converting to WebP
-    """
-    # Get request and response objects
     req = context.req
     res = context.res
-    
+
     try:
-        # Debug the request
         context.log(f"Request method: {req.method}")
         context.log(f"Request headers: {req.headers}")
-        
-        # Try to access the uploaded file from request body
-        if req.method == "POST":
-            # Get the uploaded image from body
-            if not req.body:
-                return res.json({
-                    'success': False, 
-                    'message': 'No request body found'
-                }, 400)
-            
-            # Get binary data directly from body    
-            image_data = req.body
-            image = Image.open(io.BytesIO(image_data))            
+
+        if req.method != "POST":
+            return res.json({'success': False, 'message': 'Only POST allowed'}, 405)
+
+        if not req.payload:
+            return res.json({'success': False, 'message': 'Empty request body'}, 400)
+
+        # Parse JSON and decode Base64 image
+        body = json.loads(req.payload)
+        if 'image' not in body:
+            return res.json({'success': False, 'message': 'Missing "image" field'}, 400)
+
+        try:
+            image_data = base64.b64decode(body['image'])
+        except Exception as e:
+            context.error(f"Base64 decode error: {e}")
+            return res.json({'success': False, 'message': 'Invalid Base64 image'}, 400)
+
+        image = Image.open(io.BytesIO(image_data))
+          
         
         # Upscale the image by 2x
         width, height = image.size
@@ -68,16 +71,9 @@ def main(context):
         output = io.BytesIO()
         upscaled_image.save(output, format='WEBP', quality=85)
         output.seek(0)
-        
-        # Return the processed image
-        return res.send(
-            output.getvalue(),
-            content_type='image/webp'
-        )
-        
+
+        return res.send(output.getvalue(), content_type='image/webp')
+
     except Exception as e:
-        context.error(f"Error processing image: {str(e)}")
-        return res.json({
-            'success': False,
-            'message': f'Error processing image: {str(e)}'
-        }, 500)
+        context.error(f"Error processing image: {e}")
+        return res.json({'success': False, 'message': str(e)}, 500)
