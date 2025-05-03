@@ -16,14 +16,32 @@ def main(context):
         # Check if the 'image' file was sent in FormData
         if not hasattr(req, 'files') or 'image' not in req.files:
             context.error("Missing 'image' file in FormData")
+            # Log the entire req.files object if it exists, for debugging
+            if hasattr(req, 'files'):
+                 context.log(f"Contents of req.files: {req.files}")
             return res.json({'success': False, 'message': 'Missing "image" file in form data'}, 400)
 
         # Get the file object from req.files
         image_file = req.files['image']
+        
+        # Log details about the received file object
+        context.log(f"Type of image_file: {type(image_file)}")
+        context.log(f"Attributes of image_file: {dir(image_file)}")
+        if isinstance(image_file, dict):
+            context.log(f"Keys in image_file dict: {image_file.keys()}")
 
         try:
             # Read the image data directly from the file object
-            image_data = image_file['file'].read() # Access the file content
+            # Try reading directly from the object, or adjust based on logged attributes
+            if hasattr(image_file, 'read'):
+                image_data = image_file.read()
+            elif isinstance(image_file, dict) and 'file' in image_file and hasattr(image_file['file'], 'read'):
+                # Fallback to previous attempt if direct read fails
+                image_data = image_file['file'].read()
+            else:
+                # If neither works, log an error - structure is unexpected
+                context.error("Could not find a readable attribute or method on image_file.")
+                raise ValueError("Unexpected file object structure")
         except Exception as e:
             context.error(f"Error reading image file data: {e}")
             return res.json({'success': False, 'message': 'Could not read image file data'}, 400)
