@@ -1,96 +1,79 @@
 import io
-from PIL import Image, ImageDraw, ImageFont
+# from PIL import Image, ImageDraw, ImageFont # Temporarily remove PIL imports
 
 def main(context):
     req = context.req
     res = context.res
 
     try:
+        context.log("--- Request Start ---")
         context.log(f"Request method: {req.method}")
         context.log(f"Request headers: {req.headers}")
-        context.log(f"Request files keys: {list(req.files.keys()) if hasattr(req, 'files') else 'No files attribute'}")
-
-        if req.method != "POST":
-            return res.json({'success': False, 'message': 'Only POST allowed'}, 405)
-
-        # Check if the 'image' file was sent in FormData
-        if not hasattr(req, 'files') or 'image' not in req.files:
-            context.error("Missing 'image' file in FormData")
-            # Log the entire req.files object if it exists, for debugging
-            if hasattr(req, 'files'):
-                 context.log(f"Contents of req.files: {req.files}")
-            return res.json({'success': False, 'message': 'Missing "image" file in form data'}, 400)
-
-        # Get the file object from req.files
-        image_file = req.files['image']
         
-        # Log details about the received file object
-        context.log(f"Type of image_file: {type(image_file)}")
-        context.log(f"Attributes of image_file: {dir(image_file)}")
-        if isinstance(image_file, dict):
-            context.log(f"Keys in image_file dict: {image_file.keys()}")
-
-        try:
-            # Read the image data directly from the file object
-            # Try reading directly from the object, or adjust based on logged attributes
-            if hasattr(image_file, 'read'):
-                image_data = image_file.read()
-            elif isinstance(image_file, dict) and 'file' in image_file and hasattr(image_file['file'], 'read'):
-                # Fallback to previous attempt if direct read fails
-                image_data = image_file['file'].read()
-            else:
-                # If neither works, log an error - structure is unexpected
-                context.error("Could not find a readable attribute or method on image_file.")
-                raise ValueError("Unexpected file object structure")
-        except Exception as e:
-            context.error(f"Error reading image file data: {e}")
-            return res.json({'success': False, 'message': 'Could not read image file data'}, 400)
-
-        image = Image.open(io.BytesIO(image_data))
-          
-        # Upscale the image by 2x
-        width, height = image.size
-        upscaled_image = image.resize((width*2, height*2), Image.LANCZOS)
-        
-        # Create a drawing object to add watermark
-        draw = ImageDraw.Draw(upscaled_image)
-        
-        # Try to load a font, or use default if not available
-        try:
-            font = ImageFont.truetype("arial.ttf", 40)
-        except IOError:
-            font = ImageFont.load_default()
-        
-        watermark_text = "YRM LABS ©"
-        
-        # Calculate position for watermark (bottom right)
-        if hasattr(font, "getbbox"):
-            # For newer Pillow versions
-            text_bbox = font.getbbox(watermark_text)
-            text_width = text_bbox[2] - text_bbox[0]
-            text_height = text_bbox[3] - text_bbox[1]
+        # Log different potential body/data attributes
+        if hasattr(req, 'body'):
+            context.log(f"Request body type: {type(req.body)}")
+            # Avoid logging large bodies directly unless necessary
+            # context.log(f"Request body: {req.body}") 
         else:
-            # Fallback for older Pillow versions
-            text_width, text_height = draw.textsize(watermark_text, font=font)
+            context.log("Request has no 'body' attribute.")
             
-        position = (upscaled_image.width - text_width - 20, 
-                   upscaled_image.height - text_height - 20)
-        
-        # Add the watermark in red
-        draw.text(
-            position,
-            watermark_text,
-            fill=(255, 0, 0),  # Bright red
-            font=font
-        )
-        
-        # Convert to WebP format
-        output = io.BytesIO()
-        upscaled_image.save(output, format='WEBP', quality=85)
-        output.seek(0)
+        if hasattr(req, 'payload'):
+             context.log(f"Request payload type: {type(req.payload)}")
+             # context.log(f"Request payload: {req.payload}")
+        else:
+             context.log("Request has no 'payload' attribute.")
 
-        return res.send(output.getvalue(), content_type='image/webp')
+        if hasattr(req, 'data'):
+             context.log(f"Request data type: {type(req.data)}")
+             # context.log(f"Request data: {req.data}")
+        else:
+             context.log("Request has no 'data' attribute.")
+
+        # Check req.files
+        if hasattr(req, 'files') and req.files:
+            context.log(f"Request files keys: {list(req.files.keys())}")
+            context.log(f"Contents of req.files: {req.files}") # Log the structure
+            
+            # Check specifically for 'image' key
+            if 'image' in req.files:
+                 context.log("Found 'image' key in req.files.")
+                 image_file = req.files['image']
+                 context.log(f"Type of image_file: {type(image_file)}")
+                 context.log(f"Attributes of image_file: {dir(image_file)}")
+                 if isinstance(image_file, dict):
+                     context.log(f"Keys in image_file dict: {image_file.keys()}")
+                 # Try to get size if possible
+                 if hasattr(image_file, 'size'):
+                     context.log(f"image_file size: {image_file.size}")
+                 elif isinstance(image_file, dict) and 'size' in image_file:
+                     context.log(f"image_file dict size: {image_file['size']}")
+
+                 # Return simple success if file found
+                 return res.json({'success': True, 'message': 'File received in req.files'})
+            else:
+                 context.log("Key 'image' NOT found in req.files, but req.files is not empty.")
+                 return res.json({'success': False, 'message': 'req.files populated, but missing "image" key.'}, 400)
+        else:
+            context.log("Request has no 'files' attribute or req.files is empty.")
+            # If no files, maybe the raw body has data? Check size.
+            raw_body = None
+            if hasattr(req, 'body_raw'):
+                 raw_body = req.body_raw
+                 context.log(f"Request body_raw type: {type(raw_body)}")
+                 context.log(f"Request body_raw length: {len(raw_body) if raw_body else 0}")
+            elif hasattr(req, 'body'):
+                 raw_body = req.body
+                 context.log(f"Request body length: {len(raw_body) if raw_body else 0}")
+
+            if raw_body:
+                 # If there's a raw body, maybe FormData parsing failed upstream in Appwrite?
+                 return res.json({'success': False, 'message': 'req.files empty, but raw body has content.'}, 400)
+            else:
+                 return res.json({'success': False, 'message': 'req.files empty and raw body is empty.'}, 400)
 
     except Exception as e:
-        context.error(f"Error processing image: {e}")
+        context.error(f"Error during request inspection: {e}")
         return res.json({'success': False, 'message': str(e)}, 500)
+    finally:
+        context.log("--- Request End ---")
