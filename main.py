@@ -1,7 +1,5 @@
 import io
-import base64
 from PIL import Image, ImageDraw, ImageFont
-import json
 
 def main(context):
     req = context.req
@@ -10,27 +8,28 @@ def main(context):
     try:
         context.log(f"Request method: {req.method}")
         context.log(f"Request headers: {req.headers}")
+        context.log(f"Request files keys: {list(req.files.keys()) if hasattr(req, 'files') else 'No files attribute'}")
 
         if req.method != "POST":
             return res.json({'success': False, 'message': 'Only POST allowed'}, 405)
 
-        if not req.payload:
-            return res.json({'success': False, 'message': 'Empty request body'}, 400)
+        # Check if the 'image' file was sent in FormData
+        if not hasattr(req, 'files') or 'image' not in req.files:
+            context.error("Missing 'image' file in FormData")
+            return res.json({'success': False, 'message': 'Missing "image" file in form data'}, 400)
 
-        # Parse JSON and decode Base64 image
-        body = json.loads(req.payload)
-        if 'image' not in body:
-            return res.json({'success': False, 'message': 'Missing "image" field'}, 400)
+        # Get the file object from req.files
+        image_file = req.files['image']
 
         try:
-            image_data = base64.b64decode(body['image'])
+            # Read the image data directly from the file object
+            image_data = image_file['file'].read() # Access the file content
         except Exception as e:
-            context.error(f"Base64 decode error: {e}")
-            return res.json({'success': False, 'message': 'Invalid Base64 image'}, 400)
+            context.error(f"Error reading image file data: {e}")
+            return res.json({'success': False, 'message': 'Could not read image file data'}, 400)
 
         image = Image.open(io.BytesIO(image_data))
           
-        
         # Upscale the image by 2x
         width, height = image.size
         upscaled_image = image.resize((width*2, height*2), Image.LANCZOS)
