@@ -26,7 +26,9 @@ def main(context):
         # Try to load a font, or use default if not available
         try:
             # Increase font size significantly
-            font_path = "arial.ttf" # Or specify a full path if needed
+            # IMPORTANT: Ensure 'arial.ttf' is included in a 'fonts' directory 
+            # within your serverless function's deployment package.
+            font_path = "./fonts/arial.ttf" 
             font_size = 200
             font = ImageFont.truetype(font_path, font_size) 
             context.log(f"Successfully loaded font: {font_path} with size {font_size}")
