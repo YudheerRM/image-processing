@@ -25,7 +25,8 @@ def main(context):
         
         # Try to load a font, or use default if not available
         try:
-            font = ImageFont.truetype("arial.ttf", 40)
+            # Increase font size significantly
+            font = ImageFont.truetype("arial.ttf", 200) 
         except IOError:
             font = ImageFont.load_default()
         
