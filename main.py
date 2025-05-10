@@ -34,15 +34,12 @@ def main(context):
         
         # Try to load the Tangerine font
         try:
-            # IMPORTANT: Ensure 'Tangerine-Regular.ttf' (or correct filename) 
-            # is included in 'function/fonts/' directory.
             font_path = "function/fonts/Tangerine-Bold.ttf" 
             font_size = 200 # Keep or adjust size as needed
             font = ImageFont.truetype(font_path, font_size) 
             context.log(f"Successfully loaded font: {font_path} with size {font_size}")
         except IOError:
             context.log(f"Warning: Could not load font {font_path}. Falling back to default font.")
-            # Default font likely won't look good or scale well
             font = ImageFont.load_default() 
         
         context.log(f"Using font: {font}")
@@ -52,7 +49,7 @@ def main(context):
         # Calculate text bounding box
         if hasattr(font, "getbbox"):
             text_bbox = font.getbbox(watermark_text)
-            # For TrueType fonts, bbox includes space below baseline, adjust if needed
+            # For TrueType fonts, bbox includes space below baseline
             text_width = text_bbox[2] - text_bbox[0]
             text_height = text_bbox[3] - text_bbox[1] 
             # Offset might be needed depending on font metrics for precise placement
